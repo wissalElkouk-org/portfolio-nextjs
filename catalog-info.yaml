@@ -1,0 +1,18 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: portfolio-nextjs
+  description: Portfolio Next.js de wissal Elkouk
+  annotations:
+    github.com/project-slug: wissalElkouk-org/portfolio-nextjs
+    backstage.io/source-location: url:https://github.com/wissalElkouk-org/portfolio-nextjs
+  links:
+    - url: https://hub.docker.com/r/wissl/portfolio-nextjs
+      title: Docker Hub
+    - url: http://localhost:3000
+      title: Application locale
+  tags: [nextjs, docker]
+spec:
+  type: website
+  lifecycle: production
+  owner: user:guest

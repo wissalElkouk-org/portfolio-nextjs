@@ -1,0 +1,69 @@
+name: CI-CD Portfolio
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: portfolio-nextjs
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build de l'application Next.js
+        run: |
+          npm install
+          npm run build
+
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build et push de l'image (version v<run_number>)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:v${{ github.run_number }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
+
+  deploy-local:
+    needs: build-and-push
+    runs-on: [self-hosted, local]
+    env:
+      DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      IMAGE_TAG: v${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mise à jour du déploiement local
+        run: |
+          docker compose pull
+          docker compose up -d --remove-orphans
+
+      - name: Vérification de santé
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fs http://localhost:3000/api/health; then
+              echo ""
+              echo "Application disponible : http://localhost:3000 (version $IMAGE_TAG)"
+              exit 0
+            fi
+            echo "Attente du service... ($i/20)"
+            sleep 3
+          done
+          docker compose logs
+          exit 1
